@@ -730,5 +730,24 @@
       "prompt": "content"
     },
     "folder": "python"
+  },
+  "light_novel_5000": {
+    "file_name": "light_novel_concat.txt",
+    "columns": {
+      "prompt": "text"
+    }
+  },
+  "ruozhiba": {
+    "hf_hub_url": "LooksJuicy/ruozhiba",
+    "columns": {
+      "prompt": "instruction",
+      "response": "output"
+    }
+  },
+  "moe_girl_wiki": {
+    "hf_hub_url": "KomeijiForce/moe_girl_wiki",
+    "columns": {
+      "prompt": "content"
+    }
   }
 }
