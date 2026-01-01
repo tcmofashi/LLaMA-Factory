@@ -1,0 +1,41 @@
+{
+  "total": 3,
+  "qa_success": 0,
+  "train_success": 0,
+  "total_questions": 0,
+  "results": [
+    {
+      "anime": "Re：从零开始的异世界生活 Re:ゼロから始める異世界生活",
+      "index": 1,
+      "total": 3,
+      "qa_success": false,
+      "qa_questions": 0,
+      "qa_file": null,
+      "train_success": false,
+      "train_questions": 0,
+      "error": "QA生成失败: GLM Agent执行失败: Traceback (most recent call last):\n  File \"/home/tcmofashi/LLaMA-Factory/react_agent/agent.py\", line 613, in <module>\n    main()\n    ~~~~^^\n  File \"/home/tcmofashi/LLaMA-Factory/react_agent/agent.py\", line 587, in main\n    agent = ReActAgent(\n        config_path=args.config,\n    ...<2 lines>...\n        verbose=args.verbose\n    )\n  File \"/home/tcmofashi/LLaMA-Factory/react_agent/agent.py\", line 68, in __init__\n    self.tool_manager = tools or ToolManager()\n                                 ~~~~~~~~~~~^^\n  File \"/home/tcmofashi/LLaMA-Factory/react_agent/tools.py\", line 223, in __init__\n    self._register_default_tools()\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^\n  File \"/home/tcmofashi/LLaMA-Factory/react_agent/tools.py\", line 226, in _register_default_tools\n    wiki_tool = MoegirlWikiTool()\n  File \"/home/tcmofashi/LLaMA-Factory/react_agent/tools.py\", line 43, in __init__\n    self.dataset = self._load_dataset(cache_dir)\n                   ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^\n  File \"/home/tcmofashi/LLaMA-Factory/react_agent/tools.py\", line 53, in _load_dataset\n    raise FileNotFoundError(f\"未找到萌娘百科数据集文件\")\nFileNotFoundError: 未找到萌娘百科数据集文件\n"
+    },
+    {
+      "anime": "电影 摇曳露营△ 映画 ゆるキャン△",
+      "index": 2,
+      "total": 3,
+      "qa_success": false,
+      "qa_questions": 0,
+      "qa_file": null,
+      "train_success": false,
+      "train_questions": 0,
+      "error": "QA生成失败: GLM Agent执行失败: Traceback (most recent call last):\n  File \"/home/tcmofashi/LLaMA-Factory/react_agent/agent.py\", line 613, in <module>\n    main()\n    ~~~~^^\n  File \"/home/tcmofashi/LLaMA-Factory/react_agent/agent.py\", line 587, in main\n    agent = ReActAgent(\n        config_path=args.config,\n    ...<2 lines>...\n        verbose=args.verbose\n    )\n  File \"/home/tcmofashi/LLaMA-Factory/react_agent/agent.py\", line 68, in __init__\n    self.tool_manager = tools or ToolManager()\n                                 ~~~~~~~~~~~^^\n  File \"/home/tcmofashi/LLaMA-Factory/react_agent/tools.py\", line 223, in __init__\n    self._register_default_tools()\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^\n  File \"/home/tcmofashi/LLaMA-Factory/react_agent/tools.py\", line 226, in _register_default_tools\n    wiki_tool = MoegirlWikiTool()\n  File \"/home/tcmofashi/LLaMA-Factory/react_agent/tools.py\", line 43, in __init__\n    self.dataset = self._load_dataset(cache_dir)\n                   ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^\n  File \"/home/tcmofashi/LLaMA-Factory/react_agent/tools.py\", line 53, in _load_dataset\n    raise FileNotFoundError(f\"未找到萌娘百科数据集文件\")\nFileNotFoundError: 未找到萌娘百科数据集文件\n"
+    },
+    {
+      "anime": "向阳素描×365 ひだまりスケッチ×365",
+      "index": 3,
+      "total": 3,
+      "qa_success": false,
+      "qa_questions": 0,
+      "qa_file": null,
+      "train_success": false,
+      "train_questions": 0,
+      "error": "QA生成失败: GLM Agent执行失败: Traceback (most recent call last):\n  File \"/home/tcmofashi/LLaMA-Factory/react_agent/agent.py\", line 613, in <module>\n    main()\n    ~~~~^^\n  File \"/home/tcmofashi/LLaMA-Factory/react_agent/agent.py\", line 587, in main\n    agent = ReActAgent(\n        config_path=args.config,\n    ...<2 lines>...\n        verbose=args.verbose\n    )\n  File \"/home/tcmofashi/LLaMA-Factory/react_agent/agent.py\", line 68, in __init__\n    self.tool_manager = tools or ToolManager()\n                                 ~~~~~~~~~~~^^\n  File \"/home/tcmofashi/LLaMA-Factory/react_agent/tools.py\", line 223, in __init__\n    self._register_default_tools()\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^\n  File \"/home/tcmofashi/LLaMA-Factory/react_agent/tools.py\", line 226, in _register_default_tools\n    wiki_tool = MoegirlWikiTool()\n  File \"/home/tcmofashi/LLaMA-Factory/react_agent/tools.py\", line 43, in __init__\n    self.dataset = self._load_dataset(cache_dir)\n                   ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^\n  File \"/home/tcmofashi/LLaMA-Factory/react_agent/tools.py\", line 53, in _load_dataset\n    raise FileNotFoundError(f\"未找到萌娘百科数据集文件\")\nFileNotFoundError: 未找到萌娘百科数据集文件\n"
+    }
+  ]
+}

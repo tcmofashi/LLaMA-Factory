@@ -2,16 +2,20 @@
 
 # 启用 ModelScope 下载加速
 export USE_MODELSCOPE_HUB=0
-export HF_ENDPOINT=https://hf-mirror.com
 export HF_HUB_DOWNLOAD_TIMEOUT=120
-export HF_HUB_ENABLE_HF_TRANSFER=0 
+export HF_HUB_ENABLE_HF_TRANSFER=0
+
+# 设置缓存目录到data盘
+export HF_HOME=/data0/tcmofashi/cache/huggingface
+export TRANSFORMERS_CACHE=/data0/tcmofashi/cache/transformers
+export HF_DATASETS_CACHE=/data0/tcmofashi/cache/datasets 
 
 
 # 定义模型路径
 MODEL_PATH="Qwen/Qwen3-VL-8B-Instruct"
 
 # 定义输出目录
-OUTPUT_DIR="saves/qwen3vl8b/sft/mllm_demo"
+OUTPUT_DIR="/data0/tcmofashi/saves/qwen3vl8b/sft/mllm_demo"
 
 # 创建输出目录
 mkdir -p $OUTPUT_DIR

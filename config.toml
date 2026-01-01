@@ -1,0 +1,41 @@
+# API Configuration
+# 标准化的多Provider配置，支持RPM负载均衡
+
+[agent]
+max_retries = 5  # 最大重试次数
+retry_base_delay = 2  # 重试基础延迟（秒）
+load_balancing = "weighted"  # 负载均衡策略: weighted(按RPM权重), round_robin(轮询)
+
+# Provider配置
+[providers.primary]
+name = "glm-official"
+model = "glm-4.7"
+api_key = "63d6407ed8ba4b30971ffc1491674ab2.JAc5wuEpbxvSqWkg"
+base_url = "https://open.bigmodel.cn/api/paas/v4/"
+rpm = 2  # 每分钟请求数限制（Requests Per Minute）
+timeout = 300  # 超时时间（秒）
+
+[providers.fallback]
+name = "siliconflow"
+model = "Pro/zai-org/GLM-4.7"
+api_key = "sk-lwmztlcysjknskvzgbjqnmuszojmsadudxnlwyapafovgmmi"
+base_url = "https://api.siliconflow.cn/v1"
+rpm = 60  # 硅基流动通常有更高的速率限制
+timeout = 300
+
+[providers.deepseek]
+name = "siliconflow"
+model = "Pro/deepseek-ai/DeepSeek-V3.2"
+api_key = "sk-lwmztlcysjknskvzgbjqnmuszojmsadudxnlwyapafovgmmi"
+base_url = "https://api.siliconflow.cn/v1"
+rpm = 60
+timeout = 300
+
+# 可以添加更多provider
+# [providers.secondary]
+# name = "another-provider"
+# model = "another-model"
+# api_key = "your-api-key"
+# base_url = "https://api.example.com/v1"
+# rpm = 10  # 可选：每分钟请求数限制
+
