@@ -181,3 +181,6 @@ swanlog/
 generated_predictions.jsonl
 predictions_score.json
 data/light_novel_concat.txt
+agent_data/
+agent_data_debug/
+agent_data_test/

@@ -15,8 +15,11 @@ class MoegirlTitleSearchTool_API:
         self.name = "title_search"
         self.description = "搜索萌娘百科中与标题匹配的条目"
 
-    def execute(self, title: str, top_k: int = 5) -> str:
+    def execute(self, title: str = "", top_k: int = 5) -> str:
         try:
+            if not title:
+                return "搜索失败: 缺少必需参数 title"
+
             response = requests.post(
                 f"{self.api_url}/title_search",
                 json={"title": title, "top_k": top_k},
@@ -47,8 +50,11 @@ class MoegirlKeywordSearchTool_API:
         self.name = "keyword_search"
         self.description = "在萌娘百科中搜索包含特定关键词的条目"
 
-    def execute(self, keyword: str, top_k: int = 10) -> str:
+    def execute(self, keyword: str = "", top_k: int = 10) -> str:
         try:
+            if not keyword:
+                return "搜索失败: 缺少必需参数 keyword"
+
             response = requests.post(
                 f"{self.api_url}/keyword_search",
                 json={"keyword": keyword, "top_k": top_k},
@@ -79,8 +85,11 @@ class MoegirlGetEntryTool_API:
         self.name = "get_entry"
         self.description = "获取萌娘百科条目的完整内容。使用从title_search或keyword_search获取的index来调用此工具。"
 
-    def execute(self, index: int) -> str:
+    def execute(self, index: int = -1) -> str:
         try:
+            if index is None or index == -1:
+                return "获取条目失败: 缺少必需参数 index"
+
             response = requests.post(
                 f"{self.api_url}/get_entry",
                 json={"index": index},

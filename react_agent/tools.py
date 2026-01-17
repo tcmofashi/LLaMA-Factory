@@ -26,9 +26,9 @@ class SkipAnimeTool(Tool):
     def __init__(self):
         super().__init__(
             name="skip_anime",
-            description="当萌娘百科中没有该动画的相关信息时，使用此工具跳过该动画"
+            description="当萌娘百科中没有该动画的相关信息时，使用此工具跳过该动画。**重要限制：只能在超过10轮迭代后使用（第11轮及以后）**"
         )
-    
+
     def execute(self, reason: str = "萌娘百科信息不足") -> str:
         return f"⏭️  跳过该动画\n原因: {reason}"
 

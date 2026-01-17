@@ -8,18 +8,18 @@ load_balancing = "weighted"  # 负载均衡策略: weighted(按RPM权重), round
 
 # Provider配置
 [providers.primary]
-name = "glm-official"
-model = "glm-4.7"
-api_key = "63d6407ed8ba4b30971ffc1491674ab2.JAc5wuEpbxvSqWkg"
-base_url = "https://open.bigmodel.cn/api/paas/v4/"
-rpm = 2  # 每分钟请求数限制（Requests Per Minute）
+name = "rinkoai"
+model = "zai-org/GLM-4.7"
+api_key = "sk-0QESf6Fx5LNzZmj0VpWU4kgljSOJnuxObJkngPEx2lNQkBxu"
+base_url = "https://rinkoai.com/v1"
+rpm = 60  # 每分钟请求数限制（Requests Per Minute）
 timeout = 300  # 超时时间（秒）
 
 [providers.fallback]
-name = "siliconflow"
-model = "Pro/zai-org/GLM-4.7"
-api_key = "sk-lwmztlcysjknskvzgbjqnmuszojmsadudxnlwyapafovgmmi"
-base_url = "https://api.siliconflow.cn/v1"
+name = "rinkoai"
+model = "zai-org/GLM-4.7"
+api_key = "sk-0QESf6Fx5LNzZmj0VpWU4kgljSOJnuxObJkngPEx2lNQkBxu"
+base_url = "https://rinkoai.com/v1"
 rpm = 60  # 硅基流动通常有更高的速率限制
 timeout = 300
 
@@ -28,6 +28,14 @@ name = "siliconflow"
 model = "Pro/deepseek-ai/DeepSeek-V3.2"
 api_key = "sk-lwmztlcysjknskvzgbjqnmuszojmsadudxnlwyapafovgmmi"
 base_url = "https://api.siliconflow.cn/v1"
+rpm = 60
+timeout = 300
+
+[providers.rinkoai]
+name = "rinkoai"
+model = "zai-org/GLM-4.7"
+api_key = "sk-0QESf6Fx5LNzZmj0VpWU4kgljSOJnuxObJkngPEx2lNQkBxu"
+base_url = "https://rinkoai.com/v1"
 rpm = 60
 timeout = 300
 

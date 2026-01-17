@@ -8,6 +8,7 @@ import json
 import subprocess
 from typing import List, Dict
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from filename_utils import sanitize_filename
 
 # 导入训练数据处理工具
 from training_data_utils import (
@@ -65,7 +66,8 @@ def call_agent_for_answer(question: str) -> str:
 def generate_training_data_from_questions(
     questions_file: str,
     output_dir: str,
-    max_workers: int = 5
+    max_workers: int = 5,
+    anime_name: str = None
 ):
     """
     从问题文件生成训练数据
@@ -74,6 +76,10 @@ def generate_training_data_from_questions(
         questions_file: 问题文件路径（jsonl格式）
         output_dir: 输出目录
         max_workers: 最大并发数，默认5
+        anime_name: 动画名称（可选，用于文件命名）
+
+    Returns:
+        生成的训练数据列表（OpenAI chat格式）
     """
 
     print(f"\n{'='*100}")
@@ -104,39 +110,41 @@ def generate_training_data_from_questions(
 
     with ThreadPoolExecutor(max_workers=actual_workers) as executor:
         future_to_question = {}
-        
+
         for i, question_obj in enumerate(questions, 1):
             question = question_obj["question"]
             future = executor.submit(process_single_question, question, i)
             future_to_question[future] = (question_obj, i)
-            
+
             print(f"[进度: {i}] 开始处理问题 {i+1}: {question[:80]}...")
             print(f"{'='*100}")
             print(f"🤖 回答问题 {i+1}: {question}")
             print(f"{'='*100}\n")
             print(f"⏳ 正在调用ReAct Agent生成回答...\n")
-        
+
         for future in as_completed(future_to_question):
             question_obj, idx = future_to_question[future]
-            
+
             try:
                 answer = future.result()
-                
+
                 print(f"✅ 回答生成完成\n")
                 print(f"✅ 问题 {idx} 处理完成\n")
-                
+
                 results.append({
                     "question": question_obj["question"],
                     "answer": answer,
                     "type": question_obj.get("type", "unknown")
                 })
-                
+
             except Exception as e:
                 print(f"❌ 问题 {idx} 处理失败")
                 print(f"❌ 生成回答失败: {e}\n")
-    
-    # 保存结果
-    save_training_data(results, output_dir, answer_record_dir)
+
+    # 保存结果并返回训练数据
+    train_data = save_training_data(results, output_dir, answer_record_dir, anime_name)
+
+    return train_data
 
 
 def process_single_question(question: str, index: int) -> str:
@@ -144,7 +152,7 @@ def process_single_question(question: str, index: int) -> str:
     return call_agent_for_answer(question)
 
 
-def save_training_data(results: List[Dict], output_dir: str, answer_record_dir: str):
+def save_training_data(results: List[Dict], output_dir: str, answer_record_dir: str, anime_name: str = None):
     """保存训练数据（带后处理和system prompt）"""
 
     print(f"\n{'='*100}")
@@ -183,8 +191,10 @@ def save_training_data(results: List[Dict], output_dir: str, answer_record_dir: 
     print()
 
     # 2. 保存完整格式（TXT）
-    anime_name = os.path.basename(output_dir).replace("_questions.json.jsonl", "").replace("_questions.jsonl", "")
-    full_format_file = os.path.join(answer_record_dir, f"{anime_name}_full.txt")
+    if anime_name is None:
+        anime_name = os.path.basename(output_dir).replace("_questions.json.jsonl", "").replace("_questions.jsonl", "")
+    safe_anime_name = sanitize_filename(anime_name)
+    full_format_file = os.path.join(answer_record_dir, f"{safe_anime_name}_full.txt")
 
     with open(full_format_file, 'w', encoding='utf-8') as f:
         for i, result in enumerate(processed_results, 1):
@@ -195,8 +205,8 @@ def save_training_data(results: List[Dict], output_dir: str, answer_record_dir: 
 
     print(f"✅ 完整格式: {full_format_file} ({len(processed_results)} 条) - TXT格式")
 
-    # 3. 保存伪造格式（JSON - OpenAI chat格式，带system prompt）
-    fake_format_file = os.path.join(output_dir, "train_fake.json")
+    # 3. 保存单个动画的训练数据（单独的JSON文件）
+    anime_train_file = os.path.join(output_dir, f"{safe_anime_name}_train.json")
 
     fake_data = []
     for result in processed_results:
@@ -208,13 +218,13 @@ def save_training_data(results: List[Dict], output_dir: str, answer_record_dir: 
             ]
         })
 
-    with open(fake_format_file, 'w', encoding='utf-8') as f:
+    with open(anime_train_file, 'w', encoding='utf-8') as f:
         json.dump(fake_data, f, ensure_ascii=False, indent=2)
 
-    print(f"✅ 伪造格式: {fake_format_file} ({len(processed_results)} 条总计) - JSON格式（含system prompt）")
+    print(f"✅ 单个动画训练数据: {anime_train_file} ({len(processed_results)} 条) - JSON格式")
 
     # 4. 保存问题集合（JSON）
-    questions_file = os.path.join(output_dir, "questions.json")
+    questions_file = os.path.join(output_dir, f"{safe_anime_name}_questions.json")
 
     with open(questions_file, 'w', encoding='utf-8') as f:
         json.dump(processed_results, f, ensure_ascii=False, indent=2)
@@ -222,6 +232,8 @@ def save_training_data(results: List[Dict], output_dir: str, answer_record_dir: 
     print(f"✅ 问题集合: {questions_file} ({len(processed_results)} 个问题总计) - JSON格式\n")
 
     print(f"✅ 训练数据生成完成\n")
+
+    return fake_data  # 返回生成的训练数据，用于累积
 
 
 if __name__ == "__main__":

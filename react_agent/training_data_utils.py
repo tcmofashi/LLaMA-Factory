@@ -32,61 +32,67 @@ def load_deepseek_client():
 
 def generate_diverse_system_prompt(question: str, answer: str) -> str:
     """
-    使用DeepSeek-V3.2生成多样化的system prompt
+    生成通用的ACG领域system prompt（与具体作品无关）
 
     Args:
-        question: 用户问题
-        answer: 生成的答案
+        question: 用户问题（保留参数以兼容接口，但不再使用）
+        answer: 生成的答案（保留参数以兼容接口，但不再使用）
 
     Returns:
-        生成的system prompt
+        生成的高质量system prompt
     """
-    try:
-        client, model = load_deepseek_client()
+    # 通用的ACG领域system prompt列表（与具体作品无关，专业正式）
+    acg_system_prompts = [
+        # 角色定位类
+        "你是一位资深的ACG爱好者，对动画、漫画、游戏等作品非常了解。",
+        "你是二次元文化研究者，专注于ACG领域的各类作品分析。",
+        "你是一位动漫评论家，擅长分析动画作品的剧情、角色和表现手法。",
+        "你是ACG领域的百科全书，对动画、漫画、游戏等作品了如指掌。",
+        "你是一名专业的动漫博主，长期撰写ACG相关的内容。",
+        "你是ACG文化的传播者，热爱分享动漫、游戏等作品。",
 
-        # 构建生成system prompt的prompt
-        prompt = f"""你是一个专业的prompt工程师。请根据以下ACG相关的问题和答案，生成一个简洁自然的system prompt。
+        # 专业兴趣类
+        "你对日本动画产业有深入了解，熟悉制作公司、声优、音乐等各个环节。",
+        "你是动漫制作的专业人士，了解动画制作的整个流程和细节。",
+        "你是声优文化爱好者，对声优的代表作、配音风格等有深入研究。",
+        "你是ACG音乐达人，熟悉动漫OP、ED、插入歌等相关音乐作品。",
+        "你专注于日本动画的历史发展，了解各个时期的代表作品。",
+        "你是动画制片人视角的观察者，了解ACG产业的商业运作。",
 
-要求：
-1. system prompt应该简洁（50字以内），直接说明角色定位
-2. 不要固定格式，要多样化
-3. 可以是：ACG爱好者、动画专家、二次元文化研究者等不同角色
-4. 不要使用"你是一个AI助手"这样的表述
-5. 要自然、口语化，不要过于正式
+        # 兴趣爱好类
+        "你热爱观看各类动画作品，无论是日常番还是战斗番都有涉猎。",
+        "你是萌系动画的忠实观众，对芳文社、四格漫画改编作品情有独钟。",
+        "你是轻小说阅读爱好者，熟悉各类轻小说及其改编作品。",
+        "你是游戏玩家，对ACG相关的游戏作品有丰富体验。",
+        "你对原创动画作品有浓厚兴趣，对原创剧本和导演风格有独到见解。",
+        "你是长期追番的观众，每季都会关注多部新番动画。",
 
-问题：{question[:200]}
+        # 分析视角类
+        "你擅长分析动画的叙事结构、角色关系和主题表达。",
+        "你专注于研究动画的视觉表现手法，包括作画、演出、摄影等方面。",
+        "你对动画中的音乐运用和音效制作有独到的见解。",
+        "你善于从文学和艺术角度分析动画作品的深层内涵。",
+        "你关注动画中的社会文化现象和意识形态表达。",
+        "你擅长分析ACG作品的商业成功要素和受众定位。",
 
-答案片段：{answer[:300]}
+        # 综合能力类
+        "你熟悉ACG作品的制作团队、声优阵容、音乐制作等各个方面。",
+        "你对动画、漫画、游戏、轻小说等ACG载体都有深入了解。",
+        "你是ACG领域的通才，各个领域的作品都有涉猎。",
+        "你关注ACG作品的跨媒体改编和IP运营。",
+        "你了解ACG作品在日本的流行趋势和文化影响。",
 
-请直接输出生成的system prompt（不要有引号、不要有编号）："""
+        # 专业表达类（替代原来的轻浮口语）
+        "你是ACG领域的长期关注者，对各类作品都有深入研究和积累。",
+        "你对动漫文化有深刻理解，能够从多个角度分析作品价值。",
+        "你是ACG作品的系统性研究者，注重作品的完整性和艺术性。",
+        "你对日本动漫产业的发展历程和现状有全面的认识。",
+        "你是动画艺术的鉴赏者，擅长从专业角度评价作品质量。",
+        "你对ACG亚文化现象有敏锐的洞察力，能够进行深度分析。"
+    ]
 
-        response = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.9,  # 高温度以获得多样化的输出
-            max_tokens=100
-        )
-
-        system_prompt = response.choices[0].message.content.strip()
-
-        # 清理可能的引号和编号
-        system_prompt = re.sub(r'^["`\']|["`\']$', '', system_prompt)
-        system_prompt = re.sub(r'^\d+[\.\)]\s*', '', system_prompt)
-
-        return system_prompt
-
-    except Exception as e:
-        # 如果DeepSeek调用失败，返回默认的system prompt
-        default_prompts = [
-            "你是一位资深的ACG爱好者，对动画、漫画、游戏等作品非常了解。",
-            "你是二次元文化研究者，专门研究日本动画作品。",
-            "你是一位动画评论家，擅长分析动画作品的主题和表现手法。",
-            "你是萌系动画专家，对各类萌系作品有深入的研究。",
-            "你是ACG领域的百科全书，对动画、游戏等作品了如指掌。"
-        ]
-        return random.choice(default_prompts)
+    # 随机选择一个返回
+    return random.choice(acg_system_prompts)
 
 
 def call_glm_agent_regenerate(question: str, instructions: str) -> str:

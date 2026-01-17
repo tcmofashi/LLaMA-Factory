@@ -19,6 +19,23 @@ MOEGIRL_API_URL = os.getenv("MOEGIRL_API_URL", "http://localhost:8765")
 # 导入SkipAnimeTool（两种模式都需要）
 from tools import SkipAnimeTool
 
+
+def extract_response_content(message) -> str:
+    """
+    从OpenAI响应消息中提取内容
+    支持标准content字段和reasoning字段（某些provider使用）
+    """
+    # 优先使用content字段
+    if message.content:
+        return message.content
+
+    # 某些provider（如rinkoai的GLM-4.7）使用reasoning字段
+    if hasattr(message, 'reasoning') and message.reasoning:
+        return message.reasoning
+
+    # 如果都没有，返回空字符串
+    return ""
+
 if USE_MOEGIRL_API:
     print(f"🌐 使用萌娘百科API服务模式: {MOEGIRL_API_URL}")
     from moegirl_api_client import (
@@ -46,10 +63,12 @@ class ReActAgent:
         max_iterations: int = 5,  # 默认5轮迭代，适合大多数场景
         max_new_tokens: int = 131072,  # 默认128k tokens，GLM-4.7最大支持
         verbose: bool = True,
+        max_context_tokens: int = 150000,  # 上下文窗口估算阈值
     ):
         self.config_path = config_path
         self.max_iterations = max_iterations
         self.max_new_tokens = max_new_tokens
+        self.max_context_tokens = max_context_tokens
         self.verbose = verbose
 
         # 加载配置
@@ -279,7 +298,7 @@ class ReActAgent:
                     temperature=0.7,
                     max_tokens=self.max_new_tokens,
                 )
-                return response.choices[0].message.content
+                return extract_response_content(response.choices[0].message)
 
             except openai.RateLimitError as e:
                 # API并发限制（429错误）
@@ -396,6 +415,109 @@ class ReActAgent:
         else:
             return self._generate_with_local(messages)
 
+    # ========== 上下文压缩辅助 ==========
+    def _estimate_tokens(self, messages: List[Dict[str, str]]) -> int:
+        """粗略估算tokens（字符/4），避免依赖额外tokenizer"""
+        text = json.dumps(messages, ensure_ascii=False)
+        return int(len(text) / 4)
+
+    def _summarize_context(self, prefix_messages: List[Dict[str, str]], model_name: str) -> Optional[str]:
+        """使用当前模型压缩前序对话，返回摘要文本"""
+        try:
+            if not self.client:
+                return None  # 本地模式暂不压缩，直接依赖窗口裁剪
+
+            prompt = (
+                "请用中文总结以下对话历史，保留所有已查到的关键信息、已使用的工具和结论，"
+                "避免遗漏事实。总结后用于继续对话，无需重复未完成的行动。"
+            )
+            summary_messages = [
+                {"role": "system", "content": prompt},
+                {"role": "user", "content": json.dumps(prefix_messages, ensure_ascii=False)},
+            ]
+
+            response = self.client.chat.completions.create(
+                model=model_name,
+                messages=summary_messages,
+                temperature=0.2,
+                max_tokens=150000,
+            )
+            return extract_response_content(response.choices[0].message).strip()
+        except Exception as e:
+            if self.verbose:
+                print(f"⚠️  上下文压缩失败，将退化为窗口裁剪: {e}")
+            return None
+
+    def _compact_messages(self, messages: List[Dict[str, str]]) -> List[Dict[str, str]]:
+        """当上下文超过阈值时压缩：>90k先摘要+保留最近5轮，仍>50k则保留2轮"""
+        # 粗略估算
+        est_tokens = self._estimate_tokens(messages)
+        if est_tokens <= 90000:
+            return messages
+
+        if self.verbose:
+            print(f"⚠️  上下文过长，估算 {est_tokens} tokens，开始压缩")
+
+        # 识别最近对话窗口：跳过系统消息
+        system_msg = messages[0]
+        recent_pairs = []
+        body = messages[1:]
+
+        # 将末尾消息按 assistant+user 配对回溯
+        pair_buffer = []
+        for msg in reversed(body):
+            pair_buffer.append(msg)
+            if len(pair_buffer) >= 2:  # 粗略配对
+                recent_pairs.append(list(reversed(pair_buffer)))
+                pair_buffer = []
+            if len(recent_pairs) >= 5:
+                break
+
+        recent_pairs = list(reversed(recent_pairs))  # 恢复正序
+        recent_flat = [m for pair in recent_pairs for m in pair]
+
+        # 待摘要的前序消息
+        kept_set = set(id(m) for m in recent_flat)
+        prefix_messages = [m for m in body if id(m) not in kept_set]
+
+        summary_text = self._summarize_context(prefix_messages, getattr(self, "model_name", ""))
+        summary_msg = {"role": "system", "content": f"对话摘要：{summary_text}"} if summary_text else None
+
+        new_messages = [system_msg]
+        if summary_msg:
+            new_messages.append(summary_msg)
+        new_messages.extend(recent_flat)
+
+        est_tokens_after = self._estimate_tokens(new_messages)
+        if est_tokens_after <= 50000:
+            return new_messages
+
+        if self.verbose:
+            print(f"⚠️  压缩后仍估算 {est_tokens_after} tokens，进一步缩窗至2轮")
+
+        # 仅保留最近2轮
+        recent_pairs_short = []
+        pair_buffer = []
+        for msg in reversed(body):
+            pair_buffer.append(msg)
+            if len(pair_buffer) >= 2:
+                recent_pairs_short.append(list(reversed(pair_buffer)))
+                pair_buffer = []
+            if len(recent_pairs_short) >= 2:
+                break
+        recent_pairs_short = list(reversed(recent_pairs_short))
+        recent_flat_short = [m for pair in recent_pairs_short for m in pair]
+
+        final_messages = [system_msg]
+        if summary_msg:
+            final_messages.append(summary_msg)
+        final_messages.extend(recent_flat_short)
+
+        if self.verbose:
+            print(f"✅ 上下文压缩完成，估算 {self._estimate_tokens(final_messages)} tokens")
+
+        return final_messages
+
     def _format_tools(self) -> str:
         """格式化工具列表为字符串"""
         if USE_MOEGIRL_API:
@@ -445,7 +567,9 @@ Observation: 获取到详细信息...
 Answer: 《孤独摇滚！》是...
 
 重要提示：
-- 如果萌娘百科中没有某个动画的相关信息，请使用 skip_anime 工具跳过该动画
+- **skip_anime工具只能在超过10轮迭代后使用**（第11轮及以后）
+- 在前10轮迭代中，请努力尝试各种搜索策略（不同关键词、不同搜索方式）
+- 只有在确实无法找到任何相关信息时，才能在10轮后使用skip_anime工具
 - 在搜索时，尝试使用不同的关键词（中文标题、日文标题、英文标题等）
 - 在给出答案前，确保已经收集到足够的信息
 - Answer必须基于工具返回的事实信息，不要编造
@@ -462,6 +586,9 @@ Answer: 《孤独摇滚！》是...
                 print(f"\n{'='*80}")
                 print(f"迭代 {iteration + 1}/{self.max_iterations}")
                 print(f"{'='*80}\n")
+
+            # 上下文压缩（超过90k触发，目标<=50k）
+            messages = self._compact_messages(messages)
 
             # 生成响应
             response = self.generate(messages)
@@ -505,22 +632,47 @@ Answer: 《孤独摇滚！》是...
                     if USE_MOEGIRL_API:
                         # API模式
                         if action_name == "title_search":
+                            if "title" not in action_params or not action_params.get("title"):
+                                action_params["title"] = query  # 缺省时用原始查询兜底
                             result = self.title_search_tool.execute(**action_params)
                         elif action_name == "keyword_search":
+                            if "keyword" not in action_params or not action_params.get("keyword"):
+                                action_params["keyword"] = query
                             result = self.keyword_search_tool.execute(**action_params)
                         elif action_name == "get_entry":
                             result = self.get_entry_tool.execute(**action_params)
                         elif action_name == "skip_anime":
-                            result = self.skip_tool.execute(**action_params)
+                            # 检查是否超过10轮迭代
+                            if iteration < 10:
+                                result = f"错误：skip_anime工具只能在超过10轮迭代后使用。当前迭代次数: {iteration + 1}。请继续尝试搜索信息。"
+                                if self.verbose:
+                                    print(f"⚠️  {result}\n")
+                                    print(f"💡 提示：请继续使用搜索工具查找信息，不要过早放弃\n")
+                            else:
+                                result = self.skip_tool.execute(**action_params)
                         else:
                             result = f"错误：未知工具 '{action_name}'"
                     else:
                         # 本地模式
-                        tool = self.tool_manager.get_tool(action_name)
-                        if tool:
-                            result = tool.execute(**action_params)
+                        if action_name == "skip_anime":
+                            # 检查是否超过10轮迭代
+                            if iteration < 10:
+                                result = f"错误：skip_anime工具只能在超过10轮迭代后使用。当前迭代次数: {iteration + 1}。请继续尝试搜索信息。"
+                                if self.verbose:
+                                    print(f"⚠️  {result}\n")
+                                    print(f"💡 提示：请继续使用搜索工具查找信息，不要过早放弃\n")
+                            else:
+                                tool = self.tool_manager.get_tool(action_name)
+                                if tool:
+                                    result = tool.execute(**action_params)
+                                else:
+                                    result = f"错误：未知工具 '{action_name}'"
                         else:
-                            result = f"错误：未知工具 '{action_name}'"
+                            tool = self.tool_manager.get_tool(action_name)
+                            if tool:
+                                result = tool.execute(**action_params)
+                            else:
+                                result = f"错误：未知工具 '{action_name}'"
 
                     if self.verbose:
                         print(f"📊 工具返回:\n{str(result)[:500]}...\n")
@@ -575,6 +727,7 @@ def main():
     parser.add_argument("--config", type=str, default="/home/tcmofashi/LLaMA-Factory/config.toml", help="配置文件路径")
     parser.add_argument("--max-tokens", type=int, default=131072, help="最大生成token数")
     parser.add_argument("--max-iterations", type=int, default=50, help="最大迭代次数")
+    parser.add_argument("--max-context", type=int, default=150000, help="上下文token估算阈值")
     parser.add_argument("--verbose", action="store_true", help="显示详细输出")
 
     args = parser.parse_args()
@@ -588,6 +741,7 @@ def main():
         config_path=args.config,
         max_new_tokens=args.max_tokens,
         max_iterations=args.max_iterations,
+        max_context_tokens=args.max_context,
         verbose=args.verbose
     )
 
